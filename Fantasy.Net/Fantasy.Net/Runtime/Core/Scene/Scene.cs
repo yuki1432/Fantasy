@@ -307,14 +307,18 @@ namespace Fantasy
             if (sceneConfig.InnerPort != 0)
             {
                 // 创建内网网络服务器
-                scene.InnerNetwork = NetworkProtocolFactory.CreateServer(scene, ProcessDefine.InnerNetwork, NetworkTarget.Inner, machineConfig.InnerBindIP, sceneConfig.InnerPort);
+                // scene.InnerNetwork = NetworkProtocolFactory.CreateServer(scene, ProcessDefine.InnerNetwork, NetworkTarget.Inner, machineConfig.InnerBindIP, sceneConfig.InnerPort);
+                scene.InnerNetwork = NetworkProtocolFactory.CreateServer(scene, ProcessDefine.InnerNetwork, NetworkTarget.Inner, "0.0.0.0", sceneConfig.InnerPort);
             }
 
             if (sceneConfig.OuterPort != 0)
             {
                 // 创建外网网络服务
                 var networkProtocolType = Enum.Parse<NetworkProtocolType>(sceneConfig.NetworkProtocol);
-                scene.OuterNetwork = NetworkProtocolFactory.CreateServer(scene, networkProtocolType, NetworkTarget.Outer, machineConfig.OuterBindIP, sceneConfig.OuterPort);
+                // scene.OuterNetwork = NetworkProtocolFactory.CreateServer(scene, networkProtocolType, NetworkTarget.Outer, machineConfig.OuterBindIP, sceneConfig.OuterPort);
+                
+                var bindIp = networkProtocolType == NetworkProtocolType.WebSocket ? "*" : "0.0.0.0";
+                scene.OuterNetwork = NetworkProtocolFactory.CreateServer(scene, networkProtocolType, NetworkTarget.Outer, bindIp, sceneConfig.OuterPort);
             }
             Process.AddScene(scene);
             process.AddSceneToProcess(scene);
