@@ -657,6 +657,7 @@ public sealed class ProtocolExporter
             "uint32" => "uint",
             "int64" => "long",
             "uint64" => "ulong",
+            "bytes" => "byte[]",
             _ => type
         };
     }
