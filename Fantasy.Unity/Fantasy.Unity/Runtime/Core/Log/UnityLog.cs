@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 #if UNITY_EDITOR
 using System;
 using System.Reflection;
@@ -90,7 +91,7 @@ namespace Fantasy
 
             // 获取资源路径
             string assetPath = AssetDatabase.GetAssetPath(instanceID);
-            
+
             // 判断资源类型
             if (!assetPath.EndsWith(".cs"))
             {
@@ -102,40 +103,90 @@ namespace Fantasy
 
             var stackTrace = GetStackTrace();
             if (!string.IsNullOrEmpty(stackTrace))
-                                            
+
             {
                 if (!autoFirstMatch)
                 {
                     var fullPath = UnityEngine.Application.dataPath.Substring(0, UnityEngine.Application.dataPath.LastIndexOf("Assets", StringComparison.Ordinal));
                     fullPath = $"{fullPath}{assetPath}";
                     // 跳转到目标代码的特定行
-                    InternalEditorUtility.OpenFileAtLineExternal(fullPath.Replace('/', '\\'), line);
+                    if (UnityEngine.RuntimePlatform.WindowsEditor == UnityEngine.Application.platform)
+                    {
+                        fullPath = fullPath.Replace('/', '\\');
+                    }
+                    InternalEditorUtility.OpenFileAtLineExternal(fullPath, line);
                     return true;
                 }
-
-                // 使用正则表达式匹配at的哪个脚本的哪一行
-                var matches = Regex.Match(stackTrace, @"\(at (.+)\)",
-                    RegexOptions.IgnoreCase);
-                while (matches.Success)
+                
+                // 先尝试匹配异常堆栈中的确切文件路径（格式为：[0x0000d] in /路径/文件.cs:行号）
+                var exceptionMatches = Regex.Matches(stackTrace, @"\[\w+\]\s+in\s+([^\s]+):(\d+)", RegexOptions.Multiline);
+                
+                // 存储所有匹配的文件和行号
+                var validPaths = new List<(string path, int line)>();
+                
+                // 优先处理异常堆栈中的路径信息
+                if (exceptionMatches.Count > 0)
                 {
-                    var pathLine = matches.Groups[1].Value;
-
-                    if (!pathLine.Contains("Log.cs") && 
-                        !pathLine.Contains("UnityLog.cs"))
+                    for (int i = 0; i < exceptionMatches.Count; i++)
                     {
-                        var splitIndex = pathLine.LastIndexOf(":", StringComparison.Ordinal);
-                        // 脚本路径
-                        var path = pathLine.Substring(0, splitIndex);
-                        // 行号
-                        line = Convert.ToInt32(pathLine.Substring(splitIndex + 1));
-                        var fullPath = UnityEngine.Application.dataPath.Substring(0, UnityEngine.Application.dataPath.LastIndexOf("Assets", StringComparison.Ordinal));
-                        fullPath = $"{fullPath}{path}";
-                        // 跳转到目标代码的特定行
-                        InternalEditorUtility.OpenFileAtLineExternal(fullPath.Replace('/', '\\'), line);
-                        break;
+                        if (exceptionMatches[i].Groups.Count >= 3)
+                        {
+                            string fullPath = exceptionMatches[i].Groups[1].Value;
+                            int fileLine = int.Parse(exceptionMatches[i].Groups[2].Value);
+                            
+                            // 获取Assets开始的相对路径
+                            int assetsIndex = fullPath.IndexOf("Assets");
+                            if (assetsIndex >= 0)
+                            {
+                                string relativePath = fullPath.Substring(assetsIndex);
+                                validPaths.Add((relativePath, fileLine));
+                            }
+                        }
                     }
+                }
+                else
+                {
+                    // 如果没有匹配到异常格式，则使用旧的(at ...)格式
+                    // 使用正则表达式匹配at的哪个脚本的哪一行
+                    var matches = Regex.Match(stackTrace, @"\(at (.+)\)",
+                        RegexOptions.IgnoreCase);
 
-                    matches = matches.NextMatch();
+                    while (matches.Success)
+                    {
+                        var pathLine = matches.Groups[1].Value;
+    
+                        if (!pathLine.Contains("Log.cs") &&
+                            !pathLine.Contains("UnityLog.cs"))
+                        {
+                            var splitIndex = pathLine.LastIndexOf(":", StringComparison.Ordinal);
+                            // 脚本路径
+                            var path = pathLine.Substring(0, splitIndex);
+                            // 行号
+                            int fileLine = Convert.ToInt32(pathLine.Substring(splitIndex + 1));
+                            
+                            // 添加到有效路径列表
+                            validPaths.Add((path, fileLine));
+                        }
+    
+                        matches = matches.NextMatch();
+                    }
+                }
+                
+                // 如果找到有效的路径
+                if (validPaths.Count > 0)
+                {
+                    // 获取堆栈顶部的文件路径和行号（列表的第一个元素通常是堆栈顶部）
+                    string path = validPaths[0].path;
+                    int fileLine = validPaths[0].line;
+                    
+                    var fullPath = UnityEngine.Application.dataPath.Substring(0, UnityEngine.Application.dataPath.LastIndexOf("Assets", StringComparison.Ordinal));
+                    fullPath = $"{fullPath}{path}";
+                    // 跳转到目标代码的特定行
+                    if (UnityEngine.RuntimePlatform.WindowsEditor == UnityEngine.Application.platform)
+                    {
+                        fullPath = fullPath.Replace('/', '\\');
+                    }
+                    InternalEditorUtility.OpenFileAtLineExternal(fullPath, fileLine);
                 }
 
                 return true;
