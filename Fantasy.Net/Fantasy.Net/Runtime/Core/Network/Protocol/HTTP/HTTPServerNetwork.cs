@@ -20,6 +20,18 @@ using Microsoft.Extensions.Logging;
 namespace Fantasy.Network.HTTP
 {
     /// <summary>
+    /// IOC基类
+    /// </summary>
+    public interface IIOC
+    {
+        /// <summary>
+        /// 所有继承这个接口的类，都会在web服务器初始化的时候自动调用
+        /// </summary>
+        /// <param name="services"></param>
+        void Register(IServiceCollection services);
+    }
+    
+    /// <summary>
     /// HTTP服务器
     /// </summary>
     public sealed class HTTPServerNetwork : ANetwork
@@ -64,6 +76,20 @@ namespace Fantasy.Network.HTTP
             builder.Logging.ClearProviders();
             builder.Logging.AddConsole();
             builder.Logging.SetMinimumLevel(LogLevel.Warning);
+            // from VAR in GetType().Assembly. 
+            var list = from asm in AppDomain.CurrentDomain.GetAssemblies()
+                from type in asm.GetTypes()
+                where type.GetInterfaces().Contains(typeof(IIOC)) && !type.IsAbstract && type.IsClass && type.GetConstructor(Type.EmptyTypes) != null
+                select type;
+            foreach (var i in list)
+            {
+                if (i != null)
+                {
+                    var ioc = Activator.CreateInstance(i) as IIOC;
+                    ioc!.Register(builder.Services);
+                }
+            }
+
             // 将Scene注册到 DI 容器中，传递给控制器
             builder.Services.AddSingleton(Scene);
             // 注册Scene同步过滤器
