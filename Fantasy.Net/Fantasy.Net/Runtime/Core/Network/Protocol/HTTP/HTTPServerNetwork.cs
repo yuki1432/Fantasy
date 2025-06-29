@@ -30,6 +30,18 @@ namespace Fantasy.Network.HTTP
         /// <param name="services"></param>
         void Register(IServiceCollection services);
     }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public interface IApp
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="app"></param>
+        void Register(IApplicationBuilder app);
+    }
     
     /// <summary>
     /// HTTP服务器
@@ -77,6 +89,18 @@ namespace Fantasy.Network.HTTP
             builder.Logging.AddConsole();
             builder.Logging.SetMinimumLevel(LogLevel.Warning);
             // from VAR in GetType().Assembly. 
+            // 将Scene注册到 DI 容器中，传递给控制器
+            builder.Services.AddSingleton(Scene);
+            // 注册Scene同步过滤器
+            builder.Services.AddScoped<SceneContextFilter>();
+            // 注册控制器服务
+            var addControllers = builder.Services.AddControllers()
+                .AddJsonOptions(options => { options.JsonSerializerOptions.PropertyNamingPolicy = null; });
+            foreach (var assembly in AssemblySystem.ForEachAssembly)
+            {
+                addControllers.AddApplicationPart(assembly);
+            }
+            
             var list = from asm in AppDomain.CurrentDomain.GetAssemblies()
                 from type in asm.GetTypes()
                 where type.GetInterfaces().Contains(typeof(IIOC)) && !type.IsAbstract && type.IsClass && type.GetConstructor(Type.EmptyTypes) != null
@@ -89,18 +113,7 @@ namespace Fantasy.Network.HTTP
                     ioc!.Register(builder.Services);
                 }
             }
-
-            // 将Scene注册到 DI 容器中，传递给控制器
-            builder.Services.AddSingleton(Scene);
-            // 注册Scene同步过滤器
-            builder.Services.AddScoped<SceneContextFilter>();
-            // 注册控制器服务
-            var addControllers = builder.Services.AddControllers()
-                .AddJsonOptions(options => { options.JsonSerializerOptions.PropertyNamingPolicy = null; });
-            foreach (var assembly in AssemblySystem.ForEachAssembly)
-            {
-                addControllers.AddApplicationPart(assembly);
-            }
+            
             var listenUrl = "";
             var app = builder.Build();
             // 检测当前路径下是否有证书文件
@@ -133,8 +146,24 @@ namespace Fantasy.Network.HTTP
             {
                 app.UseDeveloperExceptionPage();
             }
+            
             // 路由注册
             app.MapControllers();
+            // app.UseRouting();
+            
+            var appList = from asm in AppDomain.CurrentDomain.GetAssemblies()
+                from type in asm.GetTypes()
+                where type.GetInterfaces().Contains(typeof(IApp)) && !type.IsAbstract && type.IsClass && type.GetConstructor(Type.EmptyTypes) != null
+                select type;
+            foreach (var i in appList)
+            {
+                if (i != null)
+                {
+                    var ioc = Activator.CreateInstance(i) as IApp;
+                    ioc!.Register(app);
+                }
+            }
+            
             // 开启监听
             app.RunAsync();
             Log.Info($"SceneConfigId = {Scene.SceneConfigId} HTTPServer Listen {listenUrl}");
