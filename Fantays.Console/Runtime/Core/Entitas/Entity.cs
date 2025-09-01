@@ -6,7 +6,6 @@ using Fantasy.Pool;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using ProtoBuf;
-
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 // ReSharper disable MergeIntoPattern
 // ReSharper disable SuspiciousTypeConversion.Global
@@ -104,6 +103,11 @@ namespace Fantasy.Entitas
             return Parent as T;
         }
 
+        /// <summary>
+        /// 获取当前实体的RouteId。
+        /// </summary>
+        public long RouteId => RuntimeId;
+
         #endregion
 
         #region Create
@@ -165,6 +169,9 @@ namespace Fantasy.Entitas
             {
                 scene.EntityComponent.Awake(entity);
                 scene.EntityComponent.StartUpdate(entity);
+#if FANTASY_UNITY
+                scene.EntityComponent.StartLateUpdate(entity);
+#endif
             }
             
             return entity;
@@ -206,6 +213,9 @@ namespace Fantasy.Entitas
             {
                 scene.EntityComponent.Awake(entity);
                 scene.EntityComponent.StartUpdate(entity);
+#if FANTASY_UNITY
+                scene.EntityComponent.StartLateUpdate(entity);
+#endif
             }
 
             return entity;
@@ -228,6 +238,9 @@ namespace Fantasy.Entitas
             AddComponent(entity);
             Scene.EntityComponent.Awake(entity);
             Scene.EntityComponent.StartUpdate(entity);
+#if FANTASY_UNITY
+            Scene.EntityComponent.StartLateUpdate(entity);
+#endif
             return entity;
         }
 
@@ -244,6 +257,9 @@ namespace Fantasy.Entitas
             AddComponent(entity);
             Scene.EntityComponent.Awake(entity);
             Scene.EntityComponent.StartUpdate(entity);
+#if FANTASY_UNITY
+            Scene.EntityComponent.StartLateUpdate(entity);
+#endif
             return entity;
         }
 
@@ -402,6 +418,9 @@ namespace Fantasy.Entitas
             AddComponent(entity);
             Scene.EntityComponent.Awake(entity);
             Scene.EntityComponent.StartUpdate(entity);
+#if FANTASY_UNITY
+            Scene.EntityComponent.StartLateUpdate(entity);
+#endif
             return entity;
         }
 

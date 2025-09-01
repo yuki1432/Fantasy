@@ -15,6 +15,7 @@ public class SubScene : MonoBehaviour
      public Button SendMessageButton;
      public Button CreaateAddressabeButton;
      public Button SendAddressableButton;
+     public Button DisposeAddressableButton;
 
      public void Start()
      {
@@ -23,7 +24,17 @@ public class SubScene : MonoBehaviour
           SendMessageButton.interactable = false;
           CreaateAddressabeButton.interactable = false;
           SendAddressableButton.interactable = false;
+          DisposeAddressableButton.interactable = false;
           StartAsync().Coroutine();
+     }
+     
+     private void OnDestroy()
+     {
+          // 当Unity关闭或当前脚本销毁的时候，销毁这个Scene。
+          // 这样网络和Fantasy的相关功能都会销毁掉了。
+          // 这里只是展示一下如何销毁这个Scene的地方。
+          // 但这里销毁的时机明显是不对的，应该放到一个全局的地方。
+          _scene?.Dispose();
      }
 
      private async FTask StartAsync()
@@ -31,7 +42,7 @@ public class SubScene : MonoBehaviour
           // 初始化框架
           await Fantasy.Platform.Unity.Entry.Initialize(GetType().Assembly);
           // 如果有自己的框架，也可以就单纯拿这个Scene做网络通讯也没问题。
-          _scene = await Scene.Create(SceneRuntimeType.MainThread);
+          _scene = await Scene.Create(SceneRuntimeMode.MainThread);
           ConnectButton.onClick.RemoveAllListeners();
           ConnectButton.onClick.AddListener(Connect);
           CreateSubSceneButton.onClick.RemoveAllListeners();
@@ -48,6 +59,8 @@ public class SubScene : MonoBehaviour
           });
           SendAddressableButton.onClick.RemoveAllListeners();
           SendAddressableButton.onClick.AddListener(SendAddressable);
+          DisposeAddressableButton.onClick.RemoveAllListeners();
+          DisposeAddressableButton.onClick.AddListener(DisposeScene);
           ConnectButton.interactable = true;
      }
 
@@ -113,6 +126,7 @@ public class SubScene : MonoBehaviour
                return;
           }
 
+          DisposeAddressableButton.interactable = true;
           Log.Debug("创建SubSceneAddressable成功");
      }
 
@@ -122,5 +136,10 @@ public class SubScene : MonoBehaviour
           {
                Tag = "hi subScene Addressable"
           });
+     }
+
+     private void DisposeScene()
+     {
+          _session.Send(new C2SubScene_TestDisposeMessage());
      }
 }

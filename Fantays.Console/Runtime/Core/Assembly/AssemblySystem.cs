@@ -22,7 +22,7 @@ namespace Fantasy.Assembly
         private static readonly List<IAssembly> AssemblySystems = new List<IAssembly>();
         private static readonly Dictionary<long, AssemblyInfo> AssemblyList = new Dictionary<long, AssemblyInfo>();
 #else
-        private static readonly ConcurrentBag<IAssembly> AssemblySystems = new ConcurrentBag<IAssembly>();
+        private static readonly ConcurrentQueue<IAssembly> AssemblySystems = new ConcurrentQueue<IAssembly>();
         private static readonly ConcurrentDictionary<long, AssemblyInfo> AssemblyList = new ConcurrentDictionary<long, AssemblyInfo>();
 #endif
         /// <summary>
@@ -107,9 +107,11 @@ namespace Fantasy.Assembly
             {
                 return;
             }
-            
+#if FANTASY_WEBGL 
             AssemblySystems.Add(assemblySystem);
-            
+#else
+            AssemblySystems.Enqueue(assemblySystem);
+#endif
             foreach (var (assemblyIdentity, _) in AssemblyList)
             {
                 await assemblySystem.Load(assemblyIdentity);
@@ -129,14 +131,21 @@ namespace Fantasy.Assembly
 #if FANTASY_WEBGL
             AssemblySystems.Remove(assemblySystem);
 #else
-            while (AssemblySystems.TryTake(out var removeAssemblySystem))
+            var count = AssemblySystems.Count;
+
+            for (var i = 0; i < count; i++)
             {
-                if (removeAssemblySystem == assemblySystem)
+                if (!AssemblySystems.TryDequeue(out var removeAssemblySystem))
                 {
                     continue;
                 }
-
-                AssemblySystems.Add(removeAssemblySystem);
+                
+                if (removeAssemblySystem == assemblySystem)
+                {
+                    break;
+                }
+                
+                AssemblySystems.Enqueue(removeAssemblySystem);
             }
 #endif
         }

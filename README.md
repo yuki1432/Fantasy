@@ -8,6 +8,7 @@
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/qq362946/Fantasy)
 ![GitHub Created At](https://img.shields.io/github/created-at/qq362946/Fantasy)
 # Fantasy
+#### Fantasy框架的设计理念源自于ET框架。
 #### Fantasy是基于.NET的高性能网络开发框架，支持主流协议，前后端分离。
 #### 支持Unity/Godot/WinFrom/WPF/Console等C#客户端接入。
 #### 框架支持TCP\KCP\WebSocket\http（支持Unity发布成H5）三种网络协议。 
@@ -45,7 +46,8 @@
 #### <a href="https://github.com/ALEXTANGXIAO/TEngine"><strong>TEngine</strong></a> - TEngine是一个简单(新手友好开箱即用)且强大的Unity框架全平台解决方案。
 #### <a href="https://github.com/FlameskyDexive/Legends-Of-Heroes"><strong>Legends-Of-Heroes</strong></a> - 一个LOL风格的球球大作战游戏，基于ET，使用状态同步。
 ## 交流与讨论：  
-__讨论QQ群 : Fantasy服务器开发交流群 569888673 __
+__讨论QQ群 : 569888673  
+__联系邮箱  : 362946@qq.com
 ## 特别鸣谢
 
 感谢JetBrains公司提供的使用许可证！

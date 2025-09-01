@@ -307,4 +307,111 @@ namespace Fantasy
 		[ProtoMember(2)]
 		public uint ErrorCode { get; set; }
 	}
+	/// <summary>
+	///  Chat发送一个漫游消息给Map
+	/// </summary>
+	[ProtoContract]
+	public partial class Chat2M_TestMessage : AMessage, IRoamingMessage, IProto
+	{
+		public static Chat2M_TestMessage Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<Chat2M_TestMessage>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<Chat2M_TestMessage>(this);
+#endif
+		}
+		public uint OpCode() { return InnerOpcode.Chat2M_TestMessage; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.MapRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  测试一个Gate服务器发送一个Route消息给某个漫游终端
+	/// </summary>
+	[ProtoContract]
+	public partial class G2Map_TestRouteMessageRequest : AMessage, IRouteRequest, IProto
+	{
+		public static G2Map_TestRouteMessageRequest Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<G2Map_TestRouteMessageRequest>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<G2Map_TestRouteMessageRequest>(this);
+#endif
+		}
+		[ProtoIgnore]
+		public Map2G_TestRouteMessageResponse ResponseType { get; set; }
+		public uint OpCode() { return InnerOpcode.G2Map_TestRouteMessageRequest; }
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	[ProtoContract]
+	public partial class Map2G_TestRouteMessageResponse : AMessage, IRouteResponse, IProto
+	{
+		public static Map2G_TestRouteMessageResponse Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<Map2G_TestRouteMessageResponse>();
+		}
+		public override void Dispose()
+		{
+			ErrorCode = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<Map2G_TestRouteMessageResponse>(this);
+#endif
+		}
+		public uint OpCode() { return InnerOpcode.Map2G_TestRouteMessageResponse; }
+		[ProtoMember(1)]
+		public uint ErrorCode { get; set; }
+	}
+	/// <summary>
+	///  测试一个Gate服务器发送一个漫游协议给某个漫游终端
+	/// </summary>
+	[ProtoContract]
+	public partial class G2Map_TestRoamingMessageRequest : AMessage, IRoamingRequest, IProto
+	{
+		public static G2Map_TestRoamingMessageRequest Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<G2Map_TestRoamingMessageRequest>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<G2Map_TestRoamingMessageRequest>(this);
+#endif
+		}
+		[ProtoIgnore]
+		public Map2G_TestRoamingMessageResponse ResponseType { get; set; }
+		public uint OpCode() { return InnerOpcode.G2Map_TestRoamingMessageRequest; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.MapRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	[ProtoContract]
+	public partial class Map2G_TestRoamingMessageResponse : AMessage, IRoamingResponse, IProto
+	{
+		public static Map2G_TestRoamingMessageResponse Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<Map2G_TestRoamingMessageResponse>();
+		}
+		public override void Dispose()
+		{
+			ErrorCode = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<Map2G_TestRoamingMessageResponse>(this);
+#endif
+		}
+		public uint OpCode() { return InnerOpcode.Map2G_TestRoamingMessageResponse; }
+		[ProtoMember(1)]
+		public uint ErrorCode { get; set; }
+	}
 }

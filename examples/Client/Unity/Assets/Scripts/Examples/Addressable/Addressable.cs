@@ -23,13 +23,18 @@ public class Addressable : MonoBehaviour
         StartAsync().Coroutine();
     }
 
+    private void OnDestroy()
+    {
+        _scene?.Dispose();
+    }
+
     private async FTask StartAsync()
     {
         // 初始化框架
         await Fantasy.Platform.Unity.Entry.Initialize(GetType().Assembly);
         // 创建一个Scene，这个Scene代表一个客户端的场景，客户端的所有逻辑都可以写这里
         // 如果有自己的框架，也可以就单纯拿这个Scene做网络通讯也没问题。
-        _scene = await Scene.Create(SceneRuntimeType.MainThread);
+        _scene = await Scene.Create(SceneRuntimeMode.MainThread);
         
         SendAddressableMessage.interactable = false;
         SendAddressableRPC.interactable = false;
@@ -96,7 +101,7 @@ public class Addressable : MonoBehaviour
     private void OnConnectComplete()
     {
         Text.text = "连接成功";
-        // _session.AddComponent<SessionHeartbeatComponent>().Start(2000);
+        _session.AddComponent<SessionHeartbeatComponent>().Start(2000);
         ConnectAddressable.interactable = false;
     }
 

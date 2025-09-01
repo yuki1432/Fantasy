@@ -521,4 +521,300 @@ namespace Fantasy
 		[ProtoMember(1)]
 		public string Tag { get; set; }
 	}
+	/// <summary>
+	///  客户端向SubScene发送一个销毁测试消息
+	/// </summary>
+	[ProtoContract]
+	public partial class C2SubScene_TestDisposeMessage : AMessage, IAddressableRouteMessage, IProto
+	{
+		public static C2SubScene_TestDisposeMessage Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2SubScene_TestDisposeMessage>();
+		}
+		public override void Dispose()
+		{
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2SubScene_TestDisposeMessage>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2SubScene_TestDisposeMessage; }
+	}
+	/// <summary>
+	///  客户端向服务器发送连接消息（Roaming）
+	/// </summary>
+	[ProtoContract]
+	public partial class C2G_ConnectRoamingRequest : AMessage, IRequest, IProto
+	{
+		public static C2G_ConnectRoamingRequest Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2G_ConnectRoamingRequest>();
+		}
+		public override void Dispose()
+		{
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2G_ConnectRoamingRequest>(this);
+#endif
+		}
+		[ProtoIgnore]
+		public G2C_ConnectRoamingResponse ResponseType { get; set; }
+		public uint OpCode() { return OuterOpcode.C2G_ConnectRoamingRequest; }
+	}
+	[ProtoContract]
+	public partial class G2C_ConnectRoamingResponse : AMessage, IResponse, IProto
+	{
+		public static G2C_ConnectRoamingResponse Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<G2C_ConnectRoamingResponse>();
+		}
+		public override void Dispose()
+		{
+			ErrorCode = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<G2C_ConnectRoamingResponse>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.G2C_ConnectRoamingResponse; }
+		[ProtoMember(1)]
+		public uint ErrorCode { get; set; }
+	}
+	/// <summary>
+	///  测试一个Chat漫游普通消息
+	/// </summary>
+	[ProtoContract]
+	public partial class C2Chat_TestRoamingMessage : AMessage, IRoamingMessage, IProto
+	{
+		public static C2Chat_TestRoamingMessage Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2Chat_TestRoamingMessage>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2Chat_TestRoamingMessage>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2Chat_TestRoamingMessage; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.ChatRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  测试一个Map漫游普通消息
+	/// </summary>
+	[ProtoContract]
+	public partial class C2Map_TestRoamingMessage : AMessage, IRoamingMessage, IProto
+	{
+		public static C2Map_TestRoamingMessage Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2Map_TestRoamingMessage>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2Map_TestRoamingMessage>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2Map_TestRoamingMessage; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.MapRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  测试一个Chat漫游RPC消息
+	/// </summary>
+	[ProtoContract]
+	public partial class C2Chat_TestRPCRoamingRequest : AMessage, IRoamingRequest, IProto
+	{
+		public static C2Chat_TestRPCRoamingRequest Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2Chat_TestRPCRoamingRequest>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2Chat_TestRPCRoamingRequest>(this);
+#endif
+		}
+		[ProtoIgnore]
+		public Chat2C_TestRPCRoamingResponse ResponseType { get; set; }
+		public uint OpCode() { return OuterOpcode.C2Chat_TestRPCRoamingRequest; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.ChatRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	[ProtoContract]
+	public partial class Chat2C_TestRPCRoamingResponse : AMessage, IRoamingResponse, IProto
+	{
+		public static Chat2C_TestRPCRoamingResponse Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<Chat2C_TestRPCRoamingResponse>();
+		}
+		public override void Dispose()
+		{
+			ErrorCode = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<Chat2C_TestRPCRoamingResponse>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.Chat2C_TestRPCRoamingResponse; }
+		[ProtoMember(1)]
+		public uint ErrorCode { get; set; }
+	}
+	/// <summary>
+	///  客户端发送一个漫游消息给Map通知Map主动推送一个消息给客户端
+	/// </summary>
+	[ProtoContract]
+	public partial class C2Map_PushMessageToClient : AMessage, IRoamingMessage, IProto
+	{
+		public static C2Map_PushMessageToClient Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2Map_PushMessageToClient>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2Map_PushMessageToClient>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2Map_PushMessageToClient; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.MapRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  漫游端发送一个消息给客户端
+	/// </summary>
+	[ProtoContract]
+	public partial class Map2C_PushMessageToClient : AMessage, IRoamingMessage, IProto
+	{
+		public static Map2C_PushMessageToClient Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<Map2C_PushMessageToClient>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<Map2C_PushMessageToClient>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.Map2C_PushMessageToClient; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.MapRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  测试传送漫游的触发协议
+	/// </summary>
+	[ProtoContract]
+	public partial class C2Map_TestTransferRequest : AMessage, IRoamingRequest, IProto
+	{
+		public static C2Map_TestTransferRequest Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2Map_TestTransferRequest>();
+		}
+		public override void Dispose()
+		{
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2Map_TestTransferRequest>(this);
+#endif
+		}
+		[ProtoIgnore]
+		public Map2C_TestTransferResponse ResponseType { get; set; }
+		public uint OpCode() { return OuterOpcode.C2Map_TestTransferRequest; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.MapRoamingType;
+	}
+	[ProtoContract]
+	public partial class Map2C_TestTransferResponse : AMessage, IRoamingResponse, IProto
+	{
+		public static Map2C_TestTransferResponse Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<Map2C_TestTransferResponse>();
+		}
+		public override void Dispose()
+		{
+			ErrorCode = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<Map2C_TestTransferResponse>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.Map2C_TestTransferResponse; }
+		[ProtoMember(1)]
+		public uint ErrorCode { get; set; }
+	}
+	/// <summary>
+	///  测试一个Chat发送到Map之间漫游协议
+	/// </summary>
+	[ProtoContract]
+	public partial class C2Chat_TestSendMapMessage : AMessage, IRoamingMessage, IProto
+	{
+		public static C2Chat_TestSendMapMessage Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2Chat_TestSendMapMessage>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2Chat_TestSendMapMessage>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2Chat_TestSendMapMessage; }
+		[ProtoIgnore]
+		public int RouteType => Fantasy.RoamingType.ChatRoamingType;
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  通知Gate服务器发送一个Route消息给Map的漫游终端
+	/// </summary>
+	[ProtoContract]
+	public partial class C2G_TestRouteToRoaming : AMessage, IMessage, IProto
+	{
+		public static C2G_TestRouteToRoaming Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2G_TestRouteToRoaming>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2G_TestRouteToRoaming>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2G_TestRouteToRoaming; }
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
+	/// <summary>
+	///  通知Gate服务器发送一个漫游消息给Map的漫游终端
+	/// </summary>
+	[ProtoContract]
+	public partial class C2G_TestRoamingToRoaming : AMessage, IMessage, IProto
+	{
+		public static C2G_TestRoamingToRoaming Create(Scene scene)
+		{
+			return scene.MessagePoolComponent.Rent<C2G_TestRoamingToRoaming>();
+		}
+		public override void Dispose()
+		{
+			Tag = default;
+#if FANTASY_NET || FANTASY_UNITY
+			GetScene().MessagePoolComponent.Return<C2G_TestRoamingToRoaming>(this);
+#endif
+		}
+		public uint OpCode() { return OuterOpcode.C2G_TestRoamingToRoaming; }
+		[ProtoMember(1)]
+		public string Tag { get; set; }
+	}
 }

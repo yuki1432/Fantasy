@@ -1,6 +1,7 @@
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Fantasy.Assembly;
 using Fantasy.Async;
@@ -8,6 +9,8 @@ using Fantasy.DataStructure.Collection;
 using Fantasy.Entitas;
 using Fantasy.Entitas.Interface;
 using Fantasy.Helper;
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+#pragma warning disable CS8765 // Nullability of type of parameter doesn't match overridden member (possibly because of nullability attributes).
 
 #pragma warning disable CS8604 // Possible null reference argument.
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
@@ -39,11 +42,40 @@ namespace Fantasy.Entitas
             RunTimeId = runTimeId;
         }
     }
-    
+
+    internal struct CustomEntitiesSystemKey : IEquatable<CustomEntitiesSystemKey>
+    {
+        public int CustomEventType { get; }
+        public Type EntitiesType { get; }
+        public CustomEntitiesSystemKey(int customEventType, Type entitiesType)
+        {
+            CustomEventType = customEventType;
+            EntitiesType = entitiesType;
+        }
+        public bool Equals(CustomEntitiesSystemKey other)
+        {
+            return CustomEventType == other.CustomEventType && EntitiesType == other.EntitiesType;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is CustomEntitiesSystemKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(CustomEventType, EntitiesType);
+        }
+    }
+
     /// <summary>
     /// Entity管理组件
     /// </summary>
+#if FANTASY_UNITY
+    public sealed class EntityComponent : Entity, ISceneUpdate, ISceneLateUpdate, IAssembly
+#else
     public sealed class EntityComponent : Entity, ISceneUpdate, IAssembly
+#endif
     {
         private readonly OneToManyList<long, Type> _assemblyList = new();
         private readonly OneToManyList<long, Type> _assemblyHashCodes = new();
@@ -52,12 +84,19 @@ namespace Fantasy.Entitas
         private readonly Dictionary<Type, IUpdateSystem> _updateSystems = new();
         private readonly Dictionary<Type, IDestroySystem> _destroySystems = new();
         private readonly Dictionary<Type, IDeserializeSystem> _deserializeSystems = new();
-        private readonly Dictionary<Type, IFrameUpdateSystem> _frameUpdateSystem = new();
+        
+        private readonly OneToManyList<long, CustomEntitiesSystemKey> _assemblyCustomSystemList = new();
+        private readonly Dictionary<CustomEntitiesSystemKey, ICustomEntitiesSystem> _customEntitiesSystems = new Dictionary<CustomEntitiesSystemKey, ICustomEntitiesSystem>();
         
         private readonly Dictionary<Type, long> _hashCodes = new Dictionary<Type, long>();
         private readonly Queue<UpdateQueueInfo> _updateQueue = new Queue<UpdateQueueInfo>();
-        private readonly Queue<FrameUpdateQueueInfo> _frameUpdateQueue = new Queue<FrameUpdateQueueInfo>();
+       
         private readonly Dictionary<long, UpdateQueueInfo> _updateQueueDic = new Dictionary<long, UpdateQueueInfo>();
+#if FANTASY_UNITY
+        private readonly Dictionary<Type, ILateUpdateSystem> _lateUpdateSystems = new();
+        private readonly Queue<UpdateQueueInfo> _lateUpdateQueue = new Queue<UpdateQueueInfo>();
+        private readonly Dictionary<long, UpdateQueueInfo> _lateUpdateQueueDic = new Dictionary<long, UpdateQueueInfo>();
+#endif
 
         internal async FTask<EntityComponent> Initialize()
         {
@@ -70,7 +109,7 @@ namespace Fantasy.Entitas
         public FTask Load(long assemblyIdentity)
         {
             var task = FTask.Create(false);
-            Scene.ThreadSynchronizationContext.Post(() =>
+            Scene?.ThreadSynchronizationContext.Post(() =>
             {
                 LoadInner(assemblyIdentity);
                 task.SetResult();
@@ -81,7 +120,7 @@ namespace Fantasy.Entitas
         public FTask ReLoad(long assemblyIdentity)
         {
             var task = FTask.Create(false);
-            Scene.ThreadSynchronizationContext.Post(() =>
+            Scene?.ThreadSynchronizationContext.Post(() =>
             {
                 OnUnLoadInner(assemblyIdentity);
                 LoadInner(assemblyIdentity);
@@ -94,7 +133,7 @@ namespace Fantasy.Entitas
         public FTask OnUnLoad(long assemblyIdentity)
         {
             var task = FTask.Create(false);
-            Scene.ThreadSynchronizationContext.Post(() =>
+            Scene?.ThreadSynchronizationContext.Post(() =>
             {
                 OnUnLoadInner(assemblyIdentity);
                 task.SetResult();
@@ -141,12 +180,14 @@ namespace Fantasy.Entitas
                         _updateSystems.Add(entitiesType, iUpdateSystem);
                         break;
                     }
-                    case IFrameUpdateSystem iFrameUpdateSystem:
+#if FANTASY_UNITY
+                    case ILateUpdateSystem iLateUpdateSystem:
                     {
-                        entitiesType = iFrameUpdateSystem.EntitiesType();
-                        _frameUpdateSystem.Add(entitiesType, iFrameUpdateSystem);
+                        entitiesType = iLateUpdateSystem.EntitiesType();
+                        _lateUpdateSystems.Add(entitiesType, iLateUpdateSystem);
                         break;
-                    }
+                    }   
+#endif
                     default:
                     {
                         Log.Error($"IEntitiesSystem not support type {entitiesSystemType}");
@@ -155,6 +196,14 @@ namespace Fantasy.Entitas
                 }
 
                 _assemblyList.Add(assemblyIdentity, entitiesType);
+            }
+            
+            foreach (var customEntitiesSystemType in AssemblySystem.ForEach(assemblyIdentity, typeof(ICustomEntitiesSystem)))
+            {
+                var entity = (ICustomEntitiesSystem)Activator.CreateInstance(customEntitiesSystemType);
+                var customEntitiesSystemKey = new CustomEntitiesSystemKey(entity.CustomEventType, entity.EntitiesType());
+                _customEntitiesSystems.Add(customEntitiesSystemKey, entity);
+                _assemblyCustomSystemList.Add(assemblyIdentity, customEntitiesSystemKey);
             }
         }
 
@@ -177,11 +226,23 @@ namespace Fantasy.Entitas
                     _awakeSystems.Remove(type);
                     _updateSystems.Remove(type);
                     _destroySystems.Remove(type);
+#if FANTASY_UNITY
+                    _lateUpdateSystems.Remove(type);
+#endif
                     _deserializeSystems.Remove(type);
-                    _frameUpdateSystem.Remove(type);
                 }
-                
+
                 _assemblyList.RemoveByKey(assemblyIdentity);
+            }
+
+            if (_assemblyCustomSystemList.TryGetValue(assemblyIdentity, out var customSystemAssembly))
+            {
+                foreach (var customEntitiesSystemKey in customSystemAssembly)
+                {
+                    _customEntitiesSystems.Remove(customEntitiesSystemKey);
+                }
+
+                _assemblyCustomSystemList.RemoveByKey(assemblyIdentity);
             }
         }
 
@@ -254,10 +315,33 @@ namespace Fantasy.Entitas
 
         #endregion
 
+        #region CustomEvent
+
+        public void CustomSystem(Entity entity, int customEventType)
+        {
+            var customEntitiesSystemKey = new CustomEntitiesSystemKey(customEventType, entity.Type);
+            
+            if (!_customEntitiesSystems.TryGetValue(customEntitiesSystemKey, out var system))
+            {
+                return;
+            }
+
+            try
+            {
+                system.Invoke(entity);
+            }
+            catch (Exception e)
+            {
+                Log.Error($"{entity.Type.FullName} CustomSystem Error {e}");
+            }
+        }
+
+        #endregion
+
         #region Update
 
         /// <summary>
-        /// 将实体加入更新队列，准备进行更新
+        /// 将实体加入Update队列，准备进行Update
         /// </summary>
         /// <param name="entity">实体对象</param>
         public void StartUpdate(Entity entity)
@@ -265,21 +349,18 @@ namespace Fantasy.Entitas
             var type = entity.Type;
             var entityRuntimeId = entity.RuntimeId;
 
-            if (_updateSystems.ContainsKey(type))
+            if (!_updateSystems.ContainsKey(type))
             {
-                var updateQueueInfo = new UpdateQueueInfo(type, entityRuntimeId);
-                _updateQueue.Enqueue(updateQueueInfo);
-                _updateQueueDic.Add(entityRuntimeId, updateQueueInfo);
+                return;
             }
-
-            if (_frameUpdateSystem.ContainsKey(type))
-            {
-                _frameUpdateQueue.Enqueue(new FrameUpdateQueueInfo(type, entityRuntimeId));
-            }
+            
+            var updateQueueInfo = new UpdateQueueInfo(type, entityRuntimeId);
+            _updateQueue.Enqueue(updateQueueInfo);
+            _updateQueueDic.Add(entityRuntimeId, updateQueueInfo);
         }
 
         /// <summary>
-        /// 停止实体进行更新
+        /// 停止实体Update
         /// </summary>
         /// <param name="entity">实体对象</param>
         public void StopUpdate(Entity entity)
@@ -293,7 +374,7 @@ namespace Fantasy.Entitas
         }
 
         /// <summary>
-        /// 执行实体系统的更新逻辑
+        /// 执行实体系统的Update
         /// </summary>
         public void Update()
         {
@@ -334,44 +415,84 @@ namespace Fantasy.Entitas
             }
         }
 
-        /// <summary>
-        /// 执行实体系统的帧更新逻辑
-        /// </summary>
-        public void FrameUpdate()
-        {
-            var count = _frameUpdateQueue.Count;
+        #endregion
 
-            while (count-- > 0)
+#if FANTASY_UNITY
+        #region LateUpdate
+
+        /// <summary>
+        /// 将实体加入LateUpdate队列，准备进行LateUpdate
+        /// </summary>
+        /// <param name="entity">实体对象</param>
+        public void StartLateUpdate(Entity entity)
+        {
+            var type = entity.Type;
+            var entityRuntimeId = entity.RuntimeId;
+
+            if (!_lateUpdateSystems.ContainsKey(type))
             {
-                var frameUpdateQueueStruct = _frameUpdateQueue.Dequeue();
-                
-                if (!_frameUpdateSystem.TryGetValue(frameUpdateQueueStruct.Type, out var frameUpdateSystem))
+                return;
+            }
+            
+            var updateQueueInfo = new UpdateQueueInfo(type, entityRuntimeId);
+            _lateUpdateQueue.Enqueue(updateQueueInfo);
+            _lateUpdateQueueDic.Add(entityRuntimeId, updateQueueInfo);
+        }
+        
+        /// <summary>
+        /// 停止实体进行LateUpdate
+        /// </summary>
+        /// <param name="entity">实体对象</param>
+        public void StopLateUpdate(Entity entity)
+        {
+            if (!_lateUpdateQueueDic.Remove(entity.RuntimeId, out var updateQueueInfo))
+            {
+                return;
+            }
+
+            updateQueueInfo.IsStop = true;
+        }
+        
+        public void LateUpdate()
+        {
+            var lateUpdateQueue = _lateUpdateQueue.Count;
+
+            while (lateUpdateQueue-- > 0)
+            {
+                var lateUpdateQueueStruct = _lateUpdateQueue.Dequeue();
+
+                if (lateUpdateQueueStruct.IsStop)
                 {
                     continue;
                 }
                 
-                var entity = Scene.GetEntity(frameUpdateQueueStruct.RunTimeId);
-
+                if (!_lateUpdateSystems.TryGetValue(lateUpdateQueueStruct.Type, out var lateUpdateSystem))
+                {
+                    continue;
+                }
+                
+                var entity = Scene.GetEntity(lateUpdateQueueStruct.RunTimeId);
+                
                 if (entity == null || entity.IsDisposed)
                 {
+                    _lateUpdateQueueDic.Remove(lateUpdateQueueStruct.RunTimeId);
                     continue;
                 }
-
-                _frameUpdateQueue.Enqueue(frameUpdateQueueStruct);
-
+                
+                _lateUpdateQueue.Enqueue(lateUpdateQueueStruct);
+                
                 try
                 {
-                    frameUpdateSystem.Invoke(entity);
+                    lateUpdateSystem.Invoke(entity);
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"{frameUpdateQueueStruct.Type.FullName} FrameUpdate Error {e}");
+                    Log.Error($"{lateUpdateQueueStruct.Type.FullName} Update Error {e}");
                 }
             }
         }
-
         #endregion
-
+#endif
         public long GetHashCode(Type type)
         {
             return _hashCodes[type];
@@ -383,14 +504,17 @@ namespace Fantasy.Entitas
         public override void Dispose()
         {
             _updateQueue.Clear();
-            _frameUpdateQueue.Clear();
-
+            _updateQueueDic.Clear();
+#if FANTASY_UNITY
+            _lateUpdateQueue.Clear();
+            _lateUpdateQueueDic.Clear();
+            _lateUpdateSystems.Clear();
+#endif
             _assemblyList.Clear();
             _awakeSystems.Clear();
             _updateSystems.Clear();
             _destroySystems.Clear();
             _deserializeSystems.Clear();
-            _frameUpdateSystem.Clear();
 
             AssemblySystem.UnRegister(this);
             base.Dispose();
